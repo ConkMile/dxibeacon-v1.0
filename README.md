@@ -20,7 +20,7 @@ An .aar integration guide for Android developers, covering project setup, permis
 
 ## Documentation Overview
 
-DxBeacon SDK is a BLE advertising-device discovery and configuration library for managing and configuring DX-CP45 devices. The host app is responsible for the UI and user interactions. The SDK handles advertising-data parsing, connection authentication, parameter read/write operations, and protocol-frame encoding and decoding.
+DxBeacon SDK is a BLE advertising-device discovery and configuration library for managing and configuring Beacon devices. The host app is responsible for the UI and user interactions. The SDK handles advertising-data parsing, connection authentication, parameter read/write operations, and protocol-frame encoding and decoding.
 
 Recommended reading order: Review the architecture and the two operating phases in Chapter 1 → complete project integration in Chapters 2–4 → run the basic workflow in Chapter 5 → refer to the APIs in Chapters 6–12 as needed → review thread and write-operation constraints in Chapter 15.
 
@@ -512,7 +512,7 @@ sequenceDiagram
     participant App as Host App
     participant M as DxBeaconManager
     participant C as DxConnection
-    participant Dev as DX-CP45
+    participant Dev as DX-CPXX
     App->>M: startScan()
     M->>Dev: BluetoothLeScanner.startScan()
     Dev-->>M: ScanResult (advertising packet)
