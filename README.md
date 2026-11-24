@@ -1003,6 +1003,243 @@ This means the device rejected the selected combination (commonly when Linkable 
 
 The old password is no longer valid. You must connect using the new password. If you forget it, the device can only be reset through a factory reset. After changing the password, it is recommended to disconnect manually and return to the scanning screen.
 
+## 17. QR Code Scanning and Device Connection
+
+A QR code containing the device's MAC address is usually printed on the device enclosure. After scanning the QR code, the host application can connect to the device directly.
+
+The demo implementation consists of three main parts: integrating the scanning library, implementing the scanning page, and handling the scan result.
+
+### 17.1 Integrating the Scanning Library
+
+The demo reuses `zxing-library-2.2` to provide camera preview and real-time QR code decoding.
+
+Place `zxing-library-2.2.aar` in the `app/libs` directory, then add the library dependency in the module configuration:
+
+```
+dependencies {
+    implementation files('libs/ibeaconsdk-release.aar')
+    implementation files('libs/zxing-library-2.2.aar')   // Scanning Library (Camera Preview + Decoding)
+}
+```
+
+Add the following configuration to `gradle.properties`:
+```
+android.useAndroidX=true
+android.enableJetifier=true
+```
+
+### 17.2 Permissions
+
+| **Permission** | **Runtime Permission Required** | **Purpose** |
+| :--- | :--- | :--- |
+| `CAMERA` | Yes | Camera preview and QR code scanning |
+| `VIBRATE` | No (normal permission, automatically granted upon installation) | Vibration feedback after successful decoding |
+
+```
+<!-- AndroidManifest.xml -->
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.VIBRATE" />
+```
+
+### 17.3 Scanning Page
+
+The scanning page layout consists of a title bar and a preview container. The `CaptureFragment` is inserted into the container.
+
+```
+<!-- activity_qr_scan.xml -->
+<FrameLayout
+    android:id="@+id/flQrContainer"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1" />
+```
+
+The viewfinder layout is defined in `my_camera.xml` and passed to the library through `CodeUtils.setFragmentArgs`:
+
+```
+<!-- my_camera.xml -->
+<SurfaceView
+    android:id="@+id/preview_view"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" />
+
+<com.uuzuche.lib_zxing.view.ViewfinderView
+    android:id="@+id/viewfinder_view"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    app:inner_width="300dp"
+    app:inner_height="300dp"
+    app:inner_scan_bitmap="@drawable/scan_light" />
+```
+
+Example of the scanning Activity:
+
+```
+public class QrScanActivity extends AppCompatActivity {
+
+    public static final int SCAN_SUCCESS = 1111;
+    public static final int SCAN_FAIL    = 1112;
+    public static final String EXTRA_RESULT = "success_result";
+    public static final String EXTRA_FAIL   = "fail_result";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_qr_scan);
+
+        findViewById(R.id.btnQrBack).setOnClickListener(v ->
+                sendResult(SCAN_FAIL, EXTRA_FAIL, "Scan cancelled"));
+
+        // The caller is responsible for requesting camera permission.
+        // This check serves as a fallback.
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            sendResult(SCAN_FAIL, EXTRA_FAIL, "No camera permission");
+            return;
+        }
+        initScan();
+    }
+
+    private void initScan() {
+        CodeUtils.AnalyzeCallback callback = new CodeUtils.AnalyzeCallback() {
+            @Override
+            public void onAnalyzeSuccess(Bitmap bitmap, String result) {
+                if (!TextUtils.isEmpty(result)) {
+                    sendResult(SCAN_SUCCESS, EXTRA_RESULT, result);
+                }
+            }
+            @Override
+            public void onAnalyzeFailed() {
+                sendResult(SCAN_FAIL, EXTRA_FAIL, "Scan failed");
+            }
+        };
+
+        CaptureFragment fragment = new CaptureFragment();
+        CodeUtils.setFragmentArgs(fragment, R.layout.my_camera);   // Viewfinder layout style
+        fragment.setAnalyzeCallback(callback);
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.flQrContainer, fragment)
+                .commit();
+    }
+
+    @Override
+    public void onBackPressed() {
+        sendResult(SCAN_FAIL, EXTRA_FAIL, "Scan cancelled");
+    }
+
+    /** Return the scan result and close the page */
+    private void sendResult(int resultCode, String key, String value) {
+        setResult(resultCode, getIntent().putExtra(key, value));
+        finish();
+    }
+}
+```
+
+### 17.4 QR Code Scanning Button and Result Handling
+
+On the scanning page (`MainActivity`), when the scan button is clicked, the application first requests camera permission. Once permission is granted, it opens the QR code scanning page.
+
+```
+private static final int REQ_SCAN_QR   = 1200;    // Open the QR code scanning page
+private static final int REQ_CAMERA_QR = 1201;   // Request camera permission
+
+findViewById(R.id.btnScanQr).setOnClickListener(v -> {
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED) {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_QR);
+        return;
+    }
+    startActivityForResult(new Intent(this, QrScanActivity.class), REQ_SCAN_QR);
+});
+
+@Override
+public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    if (requestCode == REQ_CAMERA_QR) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startActivityForResult(new Intent(this, QrScanActivity.class), REQ_SCAN_QR);
+        } else {
+            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+        }
+    }
+}
+```
+
+After scanning is completed and the result is returned, parse the QR code content to obtain the MAC address, then initiate the connection:
+
+```
+@Override
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (requestCode != REQ_SCAN_QR) return;
+    if (resultCode != QrScanActivity.SCAN_SUCCESS || data == null) return;   // Cancelled or failed
+
+    String code = data.getStringExtra(QrScanActivity.EXTRA_RESULT);
+    String mac = parseMacFromQrCode(code);
+    if (mac == null) {
+        Toast.makeText(this, "Invalid QR code: " + code, Toast.LENGTH_SHORT).show();
+        return;
+    }
+    connectByQrMac(mac);
+}
+
+/** Convert the QR code content to a MAC address:
+ * Expected format: 12 hexadecimal characters (e.g., A1B2C3D4E5F6),
+ * also supporting formats with separators.
+ */
+private String parseMacFromQrCode(String code) {
+    if (code == null) return null;
+    String raw = code.replace(":", "").replace("-", "").replace(" ", "").toUpperCase();
+    if (raw.length() != 12) return null;
+    for (char c : raw.toCharArray()) {
+        boolean hexChar = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
+        if (!hexChar) return null;
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < 12; i += 2) {
+        if (sb.length() > 0) sb.append(':');
+        sb.append(raw, i, i + 2);
+    }
+    return sb.toString();
+}
+```
+
+### 17.5 Connecting to a Device Not in the Scan List
+
+The MAC address obtained from the QR code may belong to a device that has not yet been discovered by scanning (for example, if the user has not tapped the **Scan** button).
+
+In this case, you can first use `BluetoothAdapter.getRemoteDevice(mac)` to create a Bluetooth device object, then pass it to the SDK to initiate the connection.
+
+After connecting, the SDK will also perform authentication and automatically read the device configuration:
+
+```
+private void connectByQrMac(String mac) {
+    DxBeaconDevice device = null;
+    // 1. Prioritize reusing the device from the scan list (device name, advertising data, etc. are already available)
+    for (DxBeaconDevice d : manager.getDevices()) {
+        if (d.macAddress.equalsIgnoreCase(mac)) {
+            device = d;
+            break;
+        }
+    }
+    // 2. If the device is not in the list, create a device object directly using its MAC address (consistent with the original app's direct QR code connection behavior)
+
+    if (device == null) {
+        BluetoothManager btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        BluetoothAdapter btAdapter = btManager != null ? btManager.getAdapter() : null;
+        if (btAdapter == null) {
+            Toast.makeText(this, "Bluetooth not supported", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        device = new DxBeaconDevice(btAdapter.getRemoteDevice(mac));
+        qrDevices.put(mac.toUpperCase(), device);      // The demo maintains its own cache so that the configuration page can retrieve the device by MAC address.
+    }
+    connectDevice(device);                             // manager.connect + ConnectionListener
+}
+```
+
 ---
 
 ## Changelog
