@@ -15,10 +15,10 @@ An .aar integration guide for Android developers, covering project setup, permis
 
 | Resource Name | File | Version | Description | Download |
 | :--- | :--- | :--- | :--- | :--- |
-| **Android SDK Core Library** | `ibeaconsdk-release.aar` | `v1.0.0` | Core SDK library for integrating and managing DX-CP45 BLE beacon devices in Android applications. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DxiBeacon-SDK-V1.0.0/ibeaconsdk-release.aar) |
-| **Android SDK Scan Library** | `zxing-library-2.2.aar` | `v1.0.0` | Scanning library for QR code scanning and device identification. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DxiBeacon-SDK-V1.0.0/zxing-library-2.2.aar) |
-| **Client Demo Source** | `DXibeaconsdk_Demo.rar` | `v1.0.0` | Android Studio demo project for evaluating and verifying the SDK integration and beacon configuration features. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DxiBeacon-SDK-V1.0.0/DXibeaconsdk_Demo.rar) |
-| **Scan Demo Source** | `DXibeaconsdk_Scan_Demo.rar` | `v1.0.0` | Android Studio demo project demonstrating the QR code scanning workflow and related SDK integration. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DxiBeacon-SDK-V1.0.0/DXibeaconsdk_Scan_Demo.rar) |
+| **Android SDK Core Library** | `ibeaconsdk-release.aar` | `v1.0.0` | Core SDK library for integrating and managing DX-CP45 BLE beacon devices in Android applications. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DXibeacon-SDK-V1.0.0/ibeaconsdk-release.aar) |
+| **Android SDK Scan Library** | `zxing-library-2.2.aar` | `v1.0.0` | Scanning library for QR code scanning and device identification. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DXibeacon-SDK-V1.0.0/zxing-library-2.2.aar) |
+| **Demo Source** | `DXibeaconsdk_Demo.rar` | `v1.0.0` | Android Studio demo project for evaluating and verifying the SDK integration and beacon configuration features. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DXibeacon-SDK-V1.0.0/DXibeaconSDK_Demo.rar) |
+| **Add Scan Demo Source** | `DXibeaconsdk_Scan_Demo.rar` | `v1.0.0` | Android Studio demo project demonstrating the QR code scanning workflow and related SDK integration. | [Download](https://github.com/ConkMile/dxibeacon-v1.0/releases/download/DXibeacon-SDK-V1.0.0/DXibeaconSDK_Scan_Demo.rar) |
 
 
 ## Documentation Overview
